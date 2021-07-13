@@ -11,8 +11,6 @@ const (
 	normConstant2D = 47
 	normConstant3D = 103
 	normConstant4D = 30
-
-	defaultSeed = 0
 )
 
 func (s *noise) extrapolate2(xsb, ysb int32, dx, dy float64) float64 {

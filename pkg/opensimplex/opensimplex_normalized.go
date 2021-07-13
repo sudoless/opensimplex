@@ -24,7 +24,7 @@ type normNoise struct {
 // Eval2 returns a random noise value in two dimensions
 // in the range [0, 1).
 func (s *normNoise) Eval2(x, y float64) float64 {
-	//return norm2_64(s.base.Eval2(x, y))
+	// return norm2_64(s.base.Eval2(x, y))
 	r := s.base.Eval2(x, y)
 	return (r + normMin2) * normScale2
 }

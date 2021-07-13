@@ -491,22 +491,18 @@ func (s *noise) Eval3(x, y, z float64) float64 {
 		if p3 > 1 {
 			score := p3 - 1
 			if aScore <= bScore && aScore < score {
-				aScore = score
 				aPoint = 0x06
 				aIsFurtherSide = true
 			} else if aScore > bScore && bScore < score {
-				bScore = score
 				bPoint = 0x06
 				bIsFurtherSide = true
 			}
 		} else {
 			score := 1 - p3
 			if aScore <= bScore && aScore < score {
-				aScore = score
 				aPoint = 0x01
 				aIsFurtherSide = false
 			} else if aScore > bScore && bScore < score {
-				bScore = score
 				bPoint = 0x01
 				bIsFurtherSide = false
 			}
@@ -1341,11 +1337,9 @@ func (s *noise) Eval4(x, y, z, w float64) float64 {
 		// Decide if (0,0,0,1) is closer.
 		p4 := 2 - inSum + wins
 		if aScore >= bScore && p4 > bScore {
-			bScore = p4
 			bPoint = 0x08
 			bIsBiggerSide = false
 		} else if aScore < bScore && p4 > aScore {
-			aScore = p4
 			aPoint = 0x08
 			aIsBiggerSide = false
 		}
@@ -1793,11 +1787,9 @@ func (s *noise) Eval4(x, y, z, w float64) float64 {
 		// Decide if (1,1,1,0) is closer.
 		p4 := 3 - inSum + wins
 		if aScore <= bScore && p4 < bScore {
-			bScore = p4
 			bPoint = 0x07
 			bIsBiggerSide = false
 		} else if aScore > bScore && p4 < aScore {
-			aScore = p4
 			aPoint = 0x07
 			aIsBiggerSide = false
 		}
