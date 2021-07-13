@@ -1,3 +1,3 @@
-module github.com/ojrac/opensimplex-go
+module go.sdls.io/opensimplex
 
-go 1.15
+go 1.16
