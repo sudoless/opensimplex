@@ -3,6 +3,7 @@ package opensimplex
 import "math/rand"
 
 func Example() {
+	// #nosec: G404
 	noise := New(rand.Int63())
 
 	w, h := 100, 100

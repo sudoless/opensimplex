@@ -128,6 +128,7 @@ func (s *noise) Eval2(x, y float64) float64 {
 }
 
 // Eval3 returns a random noise value in three dimensions.
+//gocyclo:ignore
 func (s *noise) Eval3(x, y, z float64) float64 {
 	// Place input coordinates on simplectic honeycomb.
 	stretchOffset := (x + y + z) * stretchConstant3D
@@ -711,6 +712,7 @@ func (s *noise) Eval3(x, y, z float64) float64 {
 }
 
 // Eval4 returns a random noise value in four dimensions.
+//gocyclo:ignore
 func (s *noise) Eval4(x, y, z, w float64) float64 {
 	// Place input coordinates on simplectic honeycomb.
 	stretchOffset := (x + y + z + w) * stretchConstant4D

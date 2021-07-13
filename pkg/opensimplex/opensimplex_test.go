@@ -32,6 +32,7 @@ func loadSamples() <-chan []float64 {
 		if err != nil {
 			panic(err.Error())
 		}
+		// #nosec: G307
 		defer f.Close()
 
 		gz, err := gzip.NewReader(f)
