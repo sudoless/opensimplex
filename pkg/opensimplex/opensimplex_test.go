@@ -28,7 +28,7 @@ import (
 func loadSamples() <-chan []float64 {
 	c := make(chan []float64)
 	go func() {
-		f, err := os.Open(path.Join("test_files", "samples.json.gz"))
+		f, err := os.Open(path.Join("opensimplex_test_samples.json.gz"))
 		if err != nil {
 			panic(err.Error())
 		}
