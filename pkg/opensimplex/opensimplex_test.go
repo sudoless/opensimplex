@@ -19,9 +19,7 @@ package opensimplex
 import (
 	"compress/gzip"
 	"encoding/json"
-	"fmt"
 	"io"
-	"math/rand"
 	"os"
 	"path"
 	"testing"
@@ -113,8 +111,8 @@ func BenchmarkSamples(b *testing.B) {
 	}
 }
 
-func BenchmarkGenerateNoise10000x10000(b *testing.B) {
-	noise := New(rand.Int63())
+func BenchmarkGenerateNoiseEval2_10000x10000(b *testing.B) {
+	noise := New(1)
 	w, h := 10000, 10000
 	heightmap := make([]float64, w*h)
 
@@ -127,10 +125,4 @@ func BenchmarkGenerateNoise10000x10000(b *testing.B) {
 			}
 		}
 	}
-}
-
-func TestLen(t *testing.T) {
-	fmt.Println(len(gradients2D))
-	fmt.Println(len(gradients3D))
-	fmt.Println(len(gradients4D))
 }
