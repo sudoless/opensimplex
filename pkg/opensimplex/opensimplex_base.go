@@ -17,8 +17,8 @@ type noise struct {
 func (s *noise) Eval2(x, y float64) float64 {
 	// Place input coordinates onto grid.
 	stretchOffset := (x + y) * stretchConstant2D
-	xs := float64(x + stretchOffset)
-	ys := float64(y + stretchOffset)
+	xs := x + stretchOffset
+	ys := y + stretchOffset
 
 	// Floor to get grid coordinates of rhombus (stretched square) super-cell origin.
 	xsb := int32(math.Floor(xs))
@@ -131,9 +131,9 @@ func (s *noise) Eval2(x, y float64) float64 {
 func (s *noise) Eval3(x, y, z float64) float64 {
 	// Place input coordinates on simplectic honeycomb.
 	stretchOffset := (x + y + z) * stretchConstant3D
-	xs := float64(x + stretchOffset)
-	ys := float64(y + stretchOffset)
-	zs := float64(z + stretchOffset)
+	xs := x + stretchOffset
+	ys := y + stretchOffset
+	zs := z + stretchOffset
 
 	// Floor to get simplectic honeycomb coordinates of rhombohedron (stretched cube) super-cell origin.
 	xsb := int32(math.Floor(xs))
@@ -1256,8 +1256,9 @@ func (s *noise) Eval4(x, y, z, w float64) float64 {
 	} else if inSum <= 2 { // We're inside the first dispentachoron (Rectified 4-Simplex)
 		var aScore, bScore float64
 		var aPoint, bPoint byte
-		var aIsBiggerSide bool = true
-		var bIsBiggerSide bool = true
+
+		aIsBiggerSide := true
+		bIsBiggerSide := true
 
 		// Decide between (1,1,0,0) and (0,0,1,1)
 		if xins+yins > zins+wins {
@@ -1706,8 +1707,9 @@ func (s *noise) Eval4(x, y, z, w float64) float64 {
 	} else { // We're inside the second dispentachoron (Rectified 4-Simplex)
 		var aScore, bScore float64
 		var aPoint, bPoint byte
-		var aIsBiggerSide bool = true
-		var bIsBiggerSide bool = true
+
+		aIsBiggerSide := true
+		bIsBiggerSide := true
 
 		// Decide between (0,0,1,1) and (1,1,0,0)
 		if xins+yins < zins+wins {
