@@ -19,7 +19,9 @@ package opensimplex
 import (
 	"compress/gzip"
 	"encoding/json"
+	"fmt"
 	"io"
+	"math/rand"
 	"os"
 	"path"
 	"testing"
@@ -81,4 +83,54 @@ func TestSamplesMatch(t *testing.T) {
 				expected, actual, len(s)-1, s[:len(s)-1])
 		}
 	}
+}
+
+func BenchmarkSamples(b *testing.B) {
+	samples := loadSamples()
+	n := New(0)
+
+	b.ResetTimer()
+
+	for iter := 0; iter < b.N; iter++ {
+		for s := range samples {
+			var expected, actual float64
+			switch len(s) {
+			case 3:
+				actual = n.Eval2(s[0], s[1])
+			case 4:
+				actual = n.Eval3(s[0], s[1], s[2])
+			case 5:
+				actual = n.Eval4(s[0], s[1], s[2], s[3])
+			default:
+				b.Fatalf("Unexpected size sample: %d", len(s))
+			}
+
+			if expected != actual {
+				b.Fatalf("Expected %v, got %v for %dD sample at %v",
+					expected, actual, len(s)-1, s[:len(s)-1])
+			}
+		}
+	}
+}
+
+func BenchmarkGenerateNoise10000x10000(b *testing.B) {
+	noise := New(rand.Int63())
+	w, h := 10000, 10000
+	heightmap := make([]float64, w*h)
+
+	b.ResetTimer()
+
+	for iter := 0; iter < b.N; iter++ {
+		for y := 0; y < h; y++ {
+			for x := 0; x < w; x++ {
+				heightmap[(y*w)+x] = noise.Eval2(float64(x)/float64(w), float64(y)/float64(h))
+			}
+		}
+	}
+}
+
+func TestLen(t *testing.T) {
+	fmt.Println(len(gradients2D))
+	fmt.Println(len(gradients3D))
+	fmt.Println(len(gradients4D))
 }

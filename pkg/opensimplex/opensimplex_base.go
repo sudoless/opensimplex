@@ -8,11 +8,11 @@ import "math"
 // A seeded Noise instance. Reusing a Noise instance (rather than recreating it
 // from a known seed) will save some calculation time.
 type noise struct {
-	perm            []int16
-	permGradIndex3D []int16
+	perm            [256]int16
+	permGradIndex3D [256]int16
 }
 
-// Returns a random noise value in two dimensions. Repeated calls with the same
+// Eval2 returns a random noise value in two dimensions. Repeated calls with the same
 // x/y inputs will have the same output.
 func (s *noise) Eval2(x, y float64) float64 {
 	// Place input coordinates onto grid.
@@ -41,8 +41,8 @@ func (s *noise) Eval2(x, y float64) float64 {
 	dy0 := y - yb
 
 	// We'll be defining these inside the next block and using them afterwards.
-	var dx_ext, dy_ext float64
-	var xsv_ext, ysv_ext int32
+	var dxExt, dyExt float64
+	var xsvExt, ysvExt int32
 
 	value := float64(0)
 
@@ -68,41 +68,41 @@ func (s *noise) Eval2(x, y float64) float64 {
 		zins := 1 - inSum
 		if zins > xins || zins > yins { // (0,0) is one of the closest two triangular vertices
 			if xins > yins {
-				xsv_ext = xsb + 1
-				ysv_ext = ysb - 1
-				dx_ext = dx0 - 1
-				dy_ext = dy0 + 1
+				xsvExt = xsb + 1
+				ysvExt = ysb - 1
+				dxExt = dx0 - 1
+				dyExt = dy0 + 1
 			} else {
-				xsv_ext = xsb - 1
-				ysv_ext = ysb + 1
-				dx_ext = dx0 + 1
-				dy_ext = dy0 - 1
+				xsvExt = xsb - 1
+				ysvExt = ysb + 1
+				dxExt = dx0 + 1
+				dyExt = dy0 - 1
 			}
 		} else { // (1,0) and (0,1) are the closest two vertices.
-			xsv_ext = xsb + 1
-			ysv_ext = ysb + 1
-			dx_ext = dx0 - 1 - 2*squishConstant2D
-			dy_ext = dy0 - 1 - 2*squishConstant2D
+			xsvExt = xsb + 1
+			ysvExt = ysb + 1
+			dxExt = dx0 - 1 - 2*squishConstant2D
+			dyExt = dy0 - 1 - 2*squishConstant2D
 		}
 	} else { // We're inside the triangle (2-Simplex) at (1,1)
 		zins := 2 - inSum
 		if zins < xins || zins < yins { // (0,0) is one of the closest two triangular vertices
 			if xins > yins {
-				xsv_ext = xsb + 2
-				ysv_ext = ysb + 0
-				dx_ext = dx0 - 2 - 2*squishConstant2D
-				dy_ext = dy0 + 0 - 2*squishConstant2D
+				xsvExt = xsb + 2
+				ysvExt = ysb + 0
+				dxExt = dx0 - 2 - 2*squishConstant2D
+				dyExt = dy0 + 0 - 2*squishConstant2D
 			} else {
-				xsv_ext = xsb + 0
-				ysv_ext = ysb + 2
-				dx_ext = dx0 + 0 - 2*squishConstant2D
-				dy_ext = dy0 - 2 - 2*squishConstant2D
+				xsvExt = xsb + 0
+				ysvExt = ysb + 2
+				dxExt = dx0 + 0 - 2*squishConstant2D
+				dyExt = dy0 - 2 - 2*squishConstant2D
 			}
 		} else { // (1,0) and (0,1) are the closest two vertices.
-			dx_ext = dx0
-			dy_ext = dy0
-			xsv_ext = xsb
-			ysv_ext = ysb
+			dxExt = dx0
+			dyExt = dy0
+			xsvExt = xsb
+			ysvExt = ysb
 		}
 		xsb += 1
 		ysb += 1
@@ -118,16 +118,16 @@ func (s *noise) Eval2(x, y float64) float64 {
 	}
 
 	// Extra Vertex
-	attn_ext := 2 - dx_ext*dx_ext - dy_ext*dy_ext
-	if attn_ext > 0 {
-		attn_ext *= attn_ext
-		value += attn_ext * attn_ext * s.extrapolate2(xsv_ext, ysv_ext, dx_ext, dy_ext)
+	attnExt := 2 - dxExt*dxExt - dyExt*dyExt
+	if attnExt > 0 {
+		attnExt *= attnExt
+		value += attnExt * attnExt * s.extrapolate2(xsvExt, ysvExt, dxExt, dyExt)
 	}
 
 	return value / normConstant2D
 }
 
-// Returns a random noise value in three dimensions.
+// Eval3 returns a random noise value in three dimensions.
 func (s *noise) Eval3(x, y, z float64) float64 {
 	// Place input coordinates on simplectic honeycomb.
 	stretchOffset := (x + y + z) * stretchConstant3D
@@ -160,10 +160,10 @@ func (s *noise) Eval3(x, y, z float64) float64 {
 	dz0 := z - zb
 
 	// We'll be defining these inside the next block and using them afterwards.
-	var dx_ext0, dy_ext0, dz_ext0 float64
-	var dx_ext1, dy_ext1, dz_ext1 float64
-	var xsv_ext0, ysv_ext0, zsv_ext0 int32
-	var xsv_ext1, ysv_ext1, zsv_ext1 int32
+	var dxExt0, dyExt0, dzExt0 float64
+	var dxExt1, dyExt1, dzExt1 float64
+	var xsvExt0, ysvExt0, zsvExt0 int32
+	var xsvExt1, ysvExt1, zsvExt1 int32
 
 	value := float64(0)
 	if inSum <= 1 { // We're inside the tetrahedron (3-Simplex) at (0,0,0)
@@ -193,84 +193,84 @@ func (s *noise) Eval3(x, y, z float64) float64 {
 			}
 
 			if (c & 0x01) == 0 {
-				xsv_ext0 = xsb - 1
-				xsv_ext1 = xsb
-				dx_ext0 = dx0 + 1
-				dx_ext1 = dx0
+				xsvExt0 = xsb - 1
+				xsvExt1 = xsb
+				dxExt0 = dx0 + 1
+				dxExt1 = dx0
 			} else {
-				xsv_ext1 = xsb + 1
-				xsv_ext0 = xsv_ext1
-				dx_ext1 = dx0 - 1
-				dx_ext0 = dx_ext1
+				xsvExt1 = xsb + 1
+				xsvExt0 = xsvExt1
+				dxExt1 = dx0 - 1
+				dxExt0 = dxExt1
 			}
 
 			if (c & 0x02) == 0 {
-				ysv_ext1 = ysb
-				ysv_ext0 = ysv_ext1
-				dy_ext1 = dy0
-				dy_ext0 = dy_ext1
+				ysvExt1 = ysb
+				ysvExt0 = ysvExt1
+				dyExt1 = dy0
+				dyExt0 = dyExt1
 				if (c & 0x01) == 0 {
-					ysv_ext1 -= 1
-					dy_ext1 += 1
+					ysvExt1 -= 1
+					dyExt1 += 1
 				} else {
-					ysv_ext0 -= 1
-					dy_ext0 += 1
+					ysvExt0 -= 1
+					dyExt0 += 1
 				}
 			} else {
-				ysv_ext1 = ysb + 1
-				ysv_ext0 = ysv_ext1
-				dy_ext1 = dy0 - 1
-				dy_ext0 = dy_ext1
+				ysvExt1 = ysb + 1
+				ysvExt0 = ysvExt1
+				dyExt1 = dy0 - 1
+				dyExt0 = dyExt1
 			}
 
 			if (c & 0x04) == 0 {
-				zsv_ext0 = zsb
-				zsv_ext1 = zsb - 1
-				dz_ext0 = dz0
-				dz_ext1 = dz0 + 1
+				zsvExt0 = zsb
+				zsvExt1 = zsb - 1
+				dzExt0 = dz0
+				dzExt1 = dz0 + 1
 			} else {
-				zsv_ext1 = zsb + 1
-				zsv_ext0 = zsv_ext1
-				dz_ext1 = dz0 - 1
-				dz_ext0 = dz_ext1
+				zsvExt1 = zsb + 1
+				zsvExt0 = zsvExt1
+				dzExt1 = dz0 - 1
+				dzExt0 = dzExt1
 			}
 		} else { // (0,0,0) is not one of the closest two tetrahedral vertices.
 			c := aPoint | bPoint // Our two extra vertices are determined by the closest two.
 
 			if (c & 0x01) == 0 {
-				xsv_ext0 = xsb
-				xsv_ext1 = xsb - 1
-				dx_ext0 = dx0 - 2*squishConstant3D
-				dx_ext1 = dx0 + 1 - squishConstant3D
+				xsvExt0 = xsb
+				xsvExt1 = xsb - 1
+				dxExt0 = dx0 - 2*squishConstant3D
+				dxExt1 = dx0 + 1 - squishConstant3D
 			} else {
-				xsv_ext1 = xsb + 1
-				xsv_ext0 = xsv_ext1
-				dx_ext0 = dx0 - 1 - 2*squishConstant3D
-				dx_ext1 = dx0 - 1 - squishConstant3D
+				xsvExt1 = xsb + 1
+				xsvExt0 = xsvExt1
+				dxExt0 = dx0 - 1 - 2*squishConstant3D
+				dxExt1 = dx0 - 1 - squishConstant3D
 			}
 
 			if (c & 0x02) == 0 {
-				ysv_ext0 = ysb
-				ysv_ext1 = ysb - 1
-				dy_ext0 = dy0 - 2*squishConstant3D
-				dy_ext1 = dy0 + 1 - squishConstant3D
+				ysvExt0 = ysb
+				ysvExt1 = ysb - 1
+				dyExt0 = dy0 - 2*squishConstant3D
+				dyExt1 = dy0 + 1 - squishConstant3D
 			} else {
-				ysv_ext1 = ysb + 1
-				ysv_ext0 = ysv_ext1
-				dy_ext0 = dy0 - 1 - 2*squishConstant3D
-				dy_ext1 = dy0 - 1 - squishConstant3D
+				ysvExt1 = ysb + 1
+				ysvExt0 = ysvExt1
+				dyExt0 = dy0 - 1 - 2*squishConstant3D
+				dyExt1 = dy0 - 1 - squishConstant3D
 			}
 
 			if (c & 0x04) == 0 {
-				zsv_ext0 = zsb
-				zsv_ext1 = zsb - 1
-				dz_ext0 = dz0 - 2*squishConstant3D
-				dz_ext1 = dz0 + 1 - squishConstant3D
+				zsvExt0 = zsb
+				zsvExt1 = zsb - 1
+				dzExt0 = dz0 - 2*squishConstant3D
+				dzExt1 = dz0 + 1 - squishConstant3D
 			} else {
-				zsv_ext1 = zsb + 1
-				zsv_ext0 = zsv_ext1
-				dz_ext0 = dz0 - 1 - 2*squishConstant3D
-				dz_ext1 = dz0 - 1 - squishConstant3D
+				zsvExt1 = zsb + 1
+				zsvExt0 = zsvExt1
+				dzExt0 = dz0 - 1 - 2*squishConstant3D
+				dzExt1 = dz0 - 1 - squishConstant3D
 			}
 		}
 
@@ -337,84 +337,84 @@ func (s *noise) Eval3(x, y, z float64) float64 {
 			}
 
 			if (c & 0x01) != 0 {
-				xsv_ext0 = xsb + 2
-				xsv_ext1 = xsb + 1
-				dx_ext0 = dx0 - 2 - 3*squishConstant3D
-				dx_ext1 = dx0 - 1 - 3*squishConstant3D
+				xsvExt0 = xsb + 2
+				xsvExt1 = xsb + 1
+				dxExt0 = dx0 - 2 - 3*squishConstant3D
+				dxExt1 = dx0 - 1 - 3*squishConstant3D
 			} else {
-				xsv_ext1 = xsb
-				xsv_ext0 = xsv_ext1
-				dx_ext1 = dx0 - 3*squishConstant3D
-				dx_ext0 = dx_ext1
+				xsvExt1 = xsb
+				xsvExt0 = xsvExt1
+				dxExt1 = dx0 - 3*squishConstant3D
+				dxExt0 = dxExt1
 			}
 
 			if (c & 0x02) != 0 {
-				ysv_ext1 = ysb + 1
-				ysv_ext0 = ysv_ext1
-				dy_ext1 = dy0 - 1 - 3*squishConstant3D
-				dy_ext0 = dy_ext1
+				ysvExt1 = ysb + 1
+				ysvExt0 = ysvExt1
+				dyExt1 = dy0 - 1 - 3*squishConstant3D
+				dyExt0 = dyExt1
 				if (c & 0x01) != 0 {
-					ysv_ext1 += 1
-					dy_ext1 -= 1
+					ysvExt1 += 1
+					dyExt1 -= 1
 				} else {
-					ysv_ext0 += 1
-					dy_ext0 -= 1
+					ysvExt0 += 1
+					dyExt0 -= 1
 				}
 			} else {
-				ysv_ext1 = ysb
-				ysv_ext0 = ysv_ext1
-				dy_ext1 = dy0 - 3*squishConstant3D
-				dy_ext0 = dy_ext1
+				ysvExt1 = ysb
+				ysvExt0 = ysvExt1
+				dyExt1 = dy0 - 3*squishConstant3D
+				dyExt0 = dyExt1
 			}
 
 			if (c & 0x04) != 0 {
-				zsv_ext0 = zsb + 1
-				zsv_ext1 = zsb + 2
-				dz_ext0 = dz0 - 1 - 3*squishConstant3D
-				dz_ext1 = dz0 - 2 - 3*squishConstant3D
+				zsvExt0 = zsb + 1
+				zsvExt1 = zsb + 2
+				dzExt0 = dz0 - 1 - 3*squishConstant3D
+				dzExt1 = dz0 - 2 - 3*squishConstant3D
 			} else {
-				zsv_ext1 = zsb
-				zsv_ext0 = zsv_ext1
-				dz_ext1 = dz0 - 3*squishConstant3D
-				dz_ext0 = dz_ext1
+				zsvExt1 = zsb
+				zsvExt0 = zsvExt1
+				dzExt1 = dz0 - 3*squishConstant3D
+				dzExt0 = dzExt1
 			}
 		} else { // (1,1,1) is not one of the closest two tetrahedral vertices.
 			c := aPoint & bPoint // Our two extra vertices are determined by the closest two.
 
 			if (c & 0x01) != 0 {
-				xsv_ext0 = xsb + 1
-				xsv_ext1 = xsb + 2
-				dx_ext0 = dx0 - 1 - squishConstant3D
-				dx_ext1 = dx0 - 2 - 2*squishConstant3D
+				xsvExt0 = xsb + 1
+				xsvExt1 = xsb + 2
+				dxExt0 = dx0 - 1 - squishConstant3D
+				dxExt1 = dx0 - 2 - 2*squishConstant3D
 			} else {
-				xsv_ext1 = xsb
-				xsv_ext0 = xsv_ext1
-				dx_ext0 = dx0 - squishConstant3D
-				dx_ext1 = dx0 - 2*squishConstant3D
+				xsvExt1 = xsb
+				xsvExt0 = xsvExt1
+				dxExt0 = dx0 - squishConstant3D
+				dxExt1 = dx0 - 2*squishConstant3D
 			}
 
 			if (c & 0x02) != 0 {
-				ysv_ext0 = ysb + 1
-				ysv_ext1 = ysb + 2
-				dy_ext0 = dy0 - 1 - squishConstant3D
-				dy_ext1 = dy0 - 2 - 2*squishConstant3D
+				ysvExt0 = ysb + 1
+				ysvExt1 = ysb + 2
+				dyExt0 = dy0 - 1 - squishConstant3D
+				dyExt1 = dy0 - 2 - 2*squishConstant3D
 			} else {
-				ysv_ext1 = ysb
-				ysv_ext0 = ysv_ext1
-				dy_ext0 = dy0 - squishConstant3D
-				dy_ext1 = dy0 - 2*squishConstant3D
+				ysvExt1 = ysb
+				ysvExt0 = ysvExt1
+				dyExt0 = dy0 - squishConstant3D
+				dyExt1 = dy0 - 2*squishConstant3D
 			}
 
 			if (c & 0x04) != 0 {
-				zsv_ext0 = zsb + 1
-				zsv_ext1 = zsb + 2
-				dz_ext0 = dz0 - 1 - squishConstant3D
-				dz_ext1 = dz0 - 2 - 2*squishConstant3D
+				zsvExt0 = zsb + 1
+				zsvExt1 = zsb + 2
+				dzExt0 = dz0 - 1 - squishConstant3D
+				dzExt1 = dz0 - 2 - 2*squishConstant3D
 			} else {
-				zsv_ext1 = zsb
-				zsv_ext0 = zsv_ext1
-				dz_ext0 = dz0 - squishConstant3D
-				dz_ext1 = dz0 - 2*squishConstant3D
+				zsvExt1 = zsb
+				zsvExt0 = zsvExt1
+				dzExt0 = dz0 - squishConstant3D
+				dzExt1 = dz0 - 2*squishConstant3D
 			}
 		}
 
@@ -513,70 +513,70 @@ func (s *noise) Eval3(x, y, z float64) float64 {
 			if aIsFurtherSide { // Both closest points on (1,1,1) side
 
 				// One of the two extra points is (1,1,1)
-				dx_ext0 = dx0 - 1 - 3*squishConstant3D
-				dy_ext0 = dy0 - 1 - 3*squishConstant3D
-				dz_ext0 = dz0 - 1 - 3*squishConstant3D
-				xsv_ext0 = xsb + 1
-				ysv_ext0 = ysb + 1
-				zsv_ext0 = zsb + 1
+				dxExt0 = dx0 - 1 - 3*squishConstant3D
+				dyExt0 = dy0 - 1 - 3*squishConstant3D
+				dzExt0 = dz0 - 1 - 3*squishConstant3D
+				xsvExt0 = xsb + 1
+				ysvExt0 = ysb + 1
+				zsvExt0 = zsb + 1
 
 				// Other extra point is based on the shared axis.
 				c := aPoint & bPoint
 				if (c & 0x01) != 0 {
-					dx_ext1 = dx0 - 2 - 2*squishConstant3D
-					dy_ext1 = dy0 - 2*squishConstant3D
-					dz_ext1 = dz0 - 2*squishConstant3D
-					xsv_ext1 = xsb + 2
-					ysv_ext1 = ysb
-					zsv_ext1 = zsb
+					dxExt1 = dx0 - 2 - 2*squishConstant3D
+					dyExt1 = dy0 - 2*squishConstant3D
+					dzExt1 = dz0 - 2*squishConstant3D
+					xsvExt1 = xsb + 2
+					ysvExt1 = ysb
+					zsvExt1 = zsb
 				} else if (c & 0x02) != 0 {
-					dx_ext1 = dx0 - 2*squishConstant3D
-					dy_ext1 = dy0 - 2 - 2*squishConstant3D
-					dz_ext1 = dz0 - 2*squishConstant3D
-					xsv_ext1 = xsb
-					ysv_ext1 = ysb + 2
-					zsv_ext1 = zsb
+					dxExt1 = dx0 - 2*squishConstant3D
+					dyExt1 = dy0 - 2 - 2*squishConstant3D
+					dzExt1 = dz0 - 2*squishConstant3D
+					xsvExt1 = xsb
+					ysvExt1 = ysb + 2
+					zsvExt1 = zsb
 				} else {
-					dx_ext1 = dx0 - 2*squishConstant3D
-					dy_ext1 = dy0 - 2*squishConstant3D
-					dz_ext1 = dz0 - 2 - 2*squishConstant3D
-					xsv_ext1 = xsb
-					ysv_ext1 = ysb
-					zsv_ext1 = zsb + 2
+					dxExt1 = dx0 - 2*squishConstant3D
+					dyExt1 = dy0 - 2*squishConstant3D
+					dzExt1 = dz0 - 2 - 2*squishConstant3D
+					xsvExt1 = xsb
+					ysvExt1 = ysb
+					zsvExt1 = zsb + 2
 				}
 			} else { // Both closest points on (0,0,0) side
 
 				// One of the two extra points is (0,0,0)
-				dx_ext0 = dx0
-				dy_ext0 = dy0
-				dz_ext0 = dz0
-				xsv_ext0 = xsb
-				ysv_ext0 = ysb
-				zsv_ext0 = zsb
+				dxExt0 = dx0
+				dyExt0 = dy0
+				dzExt0 = dz0
+				xsvExt0 = xsb
+				ysvExt0 = ysb
+				zsvExt0 = zsb
 
 				// Other extra point is based on the omitted axis.
 				c := aPoint | bPoint
 				if (c & 0x01) == 0 {
-					dx_ext1 = dx0 + 1 - squishConstant3D
-					dy_ext1 = dy0 - 1 - squishConstant3D
-					dz_ext1 = dz0 - 1 - squishConstant3D
-					xsv_ext1 = xsb - 1
-					ysv_ext1 = ysb + 1
-					zsv_ext1 = zsb + 1
+					dxExt1 = dx0 + 1 - squishConstant3D
+					dyExt1 = dy0 - 1 - squishConstant3D
+					dzExt1 = dz0 - 1 - squishConstant3D
+					xsvExt1 = xsb - 1
+					ysvExt1 = ysb + 1
+					zsvExt1 = zsb + 1
 				} else if (c & 0x02) == 0 {
-					dx_ext1 = dx0 - 1 - squishConstant3D
-					dy_ext1 = dy0 + 1 - squishConstant3D
-					dz_ext1 = dz0 - 1 - squishConstant3D
-					xsv_ext1 = xsb + 1
-					ysv_ext1 = ysb - 1
-					zsv_ext1 = zsb + 1
+					dxExt1 = dx0 - 1 - squishConstant3D
+					dyExt1 = dy0 + 1 - squishConstant3D
+					dzExt1 = dz0 - 1 - squishConstant3D
+					xsvExt1 = xsb + 1
+					ysvExt1 = ysb - 1
+					zsvExt1 = zsb + 1
 				} else {
-					dx_ext1 = dx0 - 1 - squishConstant3D
-					dy_ext1 = dy0 - 1 - squishConstant3D
-					dz_ext1 = dz0 + 1 - squishConstant3D
-					xsv_ext1 = xsb + 1
-					ysv_ext1 = ysb + 1
-					zsv_ext1 = zsb - 1
+					dxExt1 = dx0 - 1 - squishConstant3D
+					dyExt1 = dy0 - 1 - squishConstant3D
+					dzExt1 = dz0 + 1 - squishConstant3D
+					xsvExt1 = xsb + 1
+					ysvExt1 = ysb + 1
+					zsvExt1 = zsb - 1
 				}
 			}
 		} else { // One point on (0,0,0) side, one point on (1,1,1) side
@@ -591,44 +591,44 @@ func (s *noise) Eval3(x, y, z float64) float64 {
 
 			// One contribution is a permutation of (1,1,-1)
 			if (c1 & 0x01) == 0 {
-				dx_ext0 = dx0 + 1 - squishConstant3D
-				dy_ext0 = dy0 - 1 - squishConstant3D
-				dz_ext0 = dz0 - 1 - squishConstant3D
-				xsv_ext0 = xsb - 1
-				ysv_ext0 = ysb + 1
-				zsv_ext0 = zsb + 1
+				dxExt0 = dx0 + 1 - squishConstant3D
+				dyExt0 = dy0 - 1 - squishConstant3D
+				dzExt0 = dz0 - 1 - squishConstant3D
+				xsvExt0 = xsb - 1
+				ysvExt0 = ysb + 1
+				zsvExt0 = zsb + 1
 			} else if (c1 & 0x02) == 0 {
-				dx_ext0 = dx0 - 1 - squishConstant3D
-				dy_ext0 = dy0 + 1 - squishConstant3D
-				dz_ext0 = dz0 - 1 - squishConstant3D
-				xsv_ext0 = xsb + 1
-				ysv_ext0 = ysb - 1
-				zsv_ext0 = zsb + 1
+				dxExt0 = dx0 - 1 - squishConstant3D
+				dyExt0 = dy0 + 1 - squishConstant3D
+				dzExt0 = dz0 - 1 - squishConstant3D
+				xsvExt0 = xsb + 1
+				ysvExt0 = ysb - 1
+				zsvExt0 = zsb + 1
 			} else {
-				dx_ext0 = dx0 - 1 - squishConstant3D
-				dy_ext0 = dy0 - 1 - squishConstant3D
-				dz_ext0 = dz0 + 1 - squishConstant3D
-				xsv_ext0 = xsb + 1
-				ysv_ext0 = ysb + 1
-				zsv_ext0 = zsb - 1
+				dxExt0 = dx0 - 1 - squishConstant3D
+				dyExt0 = dy0 - 1 - squishConstant3D
+				dzExt0 = dz0 + 1 - squishConstant3D
+				xsvExt0 = xsb + 1
+				ysvExt0 = ysb + 1
+				zsvExt0 = zsb - 1
 			}
 
 			// One contribution is a permutation of (0,0,2)
-			dx_ext1 = dx0 - 2*squishConstant3D
-			dy_ext1 = dy0 - 2*squishConstant3D
-			dz_ext1 = dz0 - 2*squishConstant3D
-			xsv_ext1 = xsb
-			ysv_ext1 = ysb
-			zsv_ext1 = zsb
+			dxExt1 = dx0 - 2*squishConstant3D
+			dyExt1 = dy0 - 2*squishConstant3D
+			dzExt1 = dz0 - 2*squishConstant3D
+			xsvExt1 = xsb
+			ysvExt1 = ysb
+			zsvExt1 = zsb
 			if (c2 & 0x01) != 0 {
-				dx_ext1 -= 2
-				xsv_ext1 += 2
+				dxExt1 -= 2
+				xsvExt1 += 2
 			} else if (c2 & 0x02) != 0 {
-				dy_ext1 -= 2
-				ysv_ext1 += 2
+				dyExt1 -= 2
+				ysvExt1 += 2
 			} else {
-				dz_ext1 -= 2
-				zsv_ext1 += 2
+				dzExt1 -= 2
+				zsvExt1 += 2
 			}
 		}
 
@@ -694,23 +694,23 @@ func (s *noise) Eval3(x, y, z float64) float64 {
 	}
 
 	// First extra vertex
-	attn_ext0 := 2 - dx_ext0*dx_ext0 - dy_ext0*dy_ext0 - dz_ext0*dz_ext0
-	if attn_ext0 > 0 {
-		attn_ext0 *= attn_ext0
-		value += attn_ext0 * attn_ext0 * s.extrapolate3(xsv_ext0, ysv_ext0, zsv_ext0, dx_ext0, dy_ext0, dz_ext0)
+	attnExt0 := 2 - dxExt0*dxExt0 - dyExt0*dyExt0 - dzExt0*dzExt0
+	if attnExt0 > 0 {
+		attnExt0 *= attnExt0
+		value += attnExt0 * attnExt0 * s.extrapolate3(xsvExt0, ysvExt0, zsvExt0, dxExt0, dyExt0, dzExt0)
 	}
 
 	// Second extra vertex
-	attn_ext1 := 2 - dx_ext1*dx_ext1 - dy_ext1*dy_ext1 - dz_ext1*dz_ext1
-	if attn_ext1 > 0 {
-		attn_ext1 *= attn_ext1
-		value += attn_ext1 * attn_ext1 * s.extrapolate3(xsv_ext1, ysv_ext1, zsv_ext1, dx_ext1, dy_ext1, dz_ext1)
+	attnExt1 := 2 - dxExt1*dxExt1 - dyExt1*dyExt1 - dzExt1*dzExt1
+	if attnExt1 > 0 {
+		attnExt1 *= attnExt1
+		value += attnExt1 * attnExt1 * s.extrapolate3(xsvExt1, ysvExt1, zsvExt1, dxExt1, dyExt1, dzExt1)
 	}
 
 	return value / normConstant3D
 }
 
-// Returns a random noise value in four dimensions.
+// Eval4 returns a random noise value in four dimensions.
 func (s *noise) Eval4(x, y, z, w float64) float64 {
 	// Place input coordinates on simplectic honeycomb.
 	stretchOffset := (x + y + z + w) * stretchConstant4D
@@ -748,12 +748,12 @@ func (s *noise) Eval4(x, y, z, w float64) float64 {
 	dw0 := w - wb
 
 	// We'll be defining these inside the next block and using them afterwards.
-	var dx_ext0, dy_ext0, dz_ext0, dw_ext0 float64
-	var dx_ext1, dy_ext1, dz_ext1, dw_ext1 float64
-	var dx_ext2, dy_ext2, dz_ext2, dw_ext2 float64
-	var xsv_ext0, ysv_ext0, zsv_ext0, wsv_ext0 int32
-	var xsv_ext1, ysv_ext1, zsv_ext1, wsv_ext1 int32
-	var xsv_ext2, ysv_ext2, zsv_ext2, wsv_ext2 int32
+	var dxExt0, dyExt0, dzExt0, dwExt0 float64
+	var dxExt1, dyExt1, dzExt1, dwExt1 float64
+	var dxExt2, dyExt2, dzExt2, dwExt2 float64
+	var xsvExt0, ysvExt0, zsvExt0, wsvExt0 int32
+	var xsvExt1, ysvExt1, zsvExt1, wsvExt1 int32
+	var xsvExt2, ysvExt2, zsvExt2, wsvExt2 int32
 
 	var value float64 = 0
 	if inSum <= 1 { // We're inside the pentachoron (4-Simplex) at (0,0,0,0)
@@ -789,166 +789,166 @@ func (s *noise) Eval4(x, y, z, w float64) float64 {
 				c = aPoint
 			}
 			if (c & 0x01) == 0 {
-				xsv_ext0 = xsb - 1
-				xsv_ext2 = xsb
-				xsv_ext1 = xsv_ext2
-				dx_ext0 = dx0 + 1
-				dx_ext2 = dx0
-				dx_ext1 = dx_ext2
+				xsvExt0 = xsb - 1
+				xsvExt2 = xsb
+				xsvExt1 = xsvExt2
+				dxExt0 = dx0 + 1
+				dxExt2 = dx0
+				dxExt1 = dxExt2
 			} else {
-				xsv_ext2 = xsb + 1
-				xsv_ext1 = xsv_ext2
-				xsv_ext0 = xsv_ext1
-				dx_ext2 = dx0 - 1
-				dx_ext1 = dx_ext2
-				dx_ext0 = dx_ext1
+				xsvExt2 = xsb + 1
+				xsvExt1 = xsvExt2
+				xsvExt0 = xsvExt1
+				dxExt2 = dx0 - 1
+				dxExt1 = dxExt2
+				dxExt0 = dxExt1
 			}
 
 			if (c & 0x02) == 0 {
-				ysv_ext2 = ysb
-				ysv_ext1 = ysv_ext2
-				ysv_ext0 = ysv_ext1
-				dy_ext2 = dy0
-				dy_ext1 = dy_ext2
-				dy_ext0 = dy_ext1
+				ysvExt2 = ysb
+				ysvExt1 = ysvExt2
+				ysvExt0 = ysvExt1
+				dyExt2 = dy0
+				dyExt1 = dyExt2
+				dyExt0 = dyExt1
 				if (c & 0x01) == 0x01 {
-					ysv_ext0 -= 1
-					dy_ext0 += 1
+					ysvExt0 -= 1
+					dyExt0 += 1
 				} else {
-					ysv_ext1 -= 1
-					dy_ext1 += 1
+					ysvExt1 -= 1
+					dyExt1 += 1
 				}
 			} else {
-				ysv_ext2 = ysb + 1
-				ysv_ext1 = ysv_ext2
-				ysv_ext0 = ysv_ext1
-				dy_ext2 = dy0 - 1
-				dy_ext1 = dy_ext2
-				dy_ext0 = dy_ext1
+				ysvExt2 = ysb + 1
+				ysvExt1 = ysvExt2
+				ysvExt0 = ysvExt1
+				dyExt2 = dy0 - 1
+				dyExt1 = dyExt2
+				dyExt0 = dyExt1
 			}
 
 			if (c & 0x04) == 0 {
-				zsv_ext2 = zsb
-				zsv_ext1 = zsv_ext2
-				zsv_ext0 = zsv_ext1
-				dz_ext2 = dz0
-				dz_ext1 = dz_ext2
-				dz_ext0 = dz_ext1
+				zsvExt2 = zsb
+				zsvExt1 = zsvExt2
+				zsvExt0 = zsvExt1
+				dzExt2 = dz0
+				dzExt1 = dzExt2
+				dzExt0 = dzExt1
 				if (c & 0x03) != 0 {
 					if (c & 0x03) == 0x03 {
-						zsv_ext0 -= 1
-						dz_ext0 += 1
+						zsvExt0 -= 1
+						dzExt0 += 1
 					} else {
-						zsv_ext1 -= 1
-						dz_ext1 += 1
+						zsvExt1 -= 1
+						dzExt1 += 1
 					}
 				} else {
-					zsv_ext2 -= 1
-					dz_ext2 += 1
+					zsvExt2 -= 1
+					dzExt2 += 1
 				}
 			} else {
-				zsv_ext2 = zsb + 1
-				zsv_ext1 = zsv_ext2
-				zsv_ext0 = zsv_ext1
-				dz_ext2 = dz0 - 1
-				dz_ext1 = dz_ext2
-				dz_ext0 = dz_ext1
+				zsvExt2 = zsb + 1
+				zsvExt1 = zsvExt2
+				zsvExt0 = zsvExt1
+				dzExt2 = dz0 - 1
+				dzExt1 = dzExt2
+				dzExt0 = dzExt1
 			}
 
 			if (c & 0x08) == 0 {
-				wsv_ext1 = wsb
-				wsv_ext0 = wsv_ext1
-				wsv_ext2 = wsb - 1
-				dw_ext1 = dw0
-				dw_ext0 = dw_ext1
-				dw_ext2 = dw0 + 1
+				wsvExt1 = wsb
+				wsvExt0 = wsvExt1
+				wsvExt2 = wsb - 1
+				dwExt1 = dw0
+				dwExt0 = dwExt1
+				dwExt2 = dw0 + 1
 			} else {
-				wsv_ext2 = wsb + 1
-				wsv_ext1 = wsv_ext2
-				wsv_ext0 = wsv_ext1
-				dw_ext2 = dw0 - 1
-				dw_ext1 = dw_ext2
-				dw_ext0 = dw_ext1
+				wsvExt2 = wsb + 1
+				wsvExt1 = wsvExt2
+				wsvExt0 = wsvExt1
+				dwExt2 = dw0 - 1
+				dwExt1 = dwExt2
+				dwExt0 = dwExt1
 			}
 		} else { // (0,0,0,0) is not one of the closest two pentachoron vertices.
 			c := aPoint | bPoint // Our three extra vertices are determined by the closest two.
 
 			if (c & 0x01) == 0 {
-				xsv_ext2 = xsb
-				xsv_ext0 = xsv_ext2
-				xsv_ext1 = xsb - 1
-				dx_ext0 = dx0 - 2*squishConstant4D
-				dx_ext1 = dx0 + 1 - squishConstant4D
-				dx_ext2 = dx0 - squishConstant4D
+				xsvExt2 = xsb
+				xsvExt0 = xsvExt2
+				xsvExt1 = xsb - 1
+				dxExt0 = dx0 - 2*squishConstant4D
+				dxExt1 = dx0 + 1 - squishConstant4D
+				dxExt2 = dx0 - squishConstant4D
 			} else {
-				xsv_ext2 = xsb + 1
-				xsv_ext1 = xsv_ext2
-				xsv_ext0 = xsv_ext1
-				dx_ext0 = dx0 - 1 - 2*squishConstant4D
-				dx_ext2 = dx0 - 1 - squishConstant4D
-				dx_ext1 = dx_ext2
+				xsvExt2 = xsb + 1
+				xsvExt1 = xsvExt2
+				xsvExt0 = xsvExt1
+				dxExt0 = dx0 - 1 - 2*squishConstant4D
+				dxExt2 = dx0 - 1 - squishConstant4D
+				dxExt1 = dxExt2
 			}
 
 			if (c & 0x02) == 0 {
-				ysv_ext2 = ysb
-				ysv_ext1 = ysv_ext2
-				ysv_ext0 = ysv_ext1
-				dy_ext0 = dy0 - 2*squishConstant4D
-				dy_ext2 = dy0 - squishConstant4D
-				dy_ext1 = dy_ext2
+				ysvExt2 = ysb
+				ysvExt1 = ysvExt2
+				ysvExt0 = ysvExt1
+				dyExt0 = dy0 - 2*squishConstant4D
+				dyExt2 = dy0 - squishConstant4D
+				dyExt1 = dyExt2
 				if (c & 0x01) == 0x01 {
-					ysv_ext1 -= 1
-					dy_ext1 += 1
+					ysvExt1 -= 1
+					dyExt1 += 1
 				} else {
-					ysv_ext2 -= 1
-					dy_ext2 += 1
+					ysvExt2 -= 1
+					dyExt2 += 1
 				}
 			} else {
-				ysv_ext2 = ysb + 1
-				ysv_ext1 = ysv_ext2
-				ysv_ext0 = ysv_ext1
-				dy_ext0 = dy0 - 1 - 2*squishConstant4D
-				dy_ext2 = dy0 - 1 - squishConstant4D
-				dy_ext1 = dy_ext2
+				ysvExt2 = ysb + 1
+				ysvExt1 = ysvExt2
+				ysvExt0 = ysvExt1
+				dyExt0 = dy0 - 1 - 2*squishConstant4D
+				dyExt2 = dy0 - 1 - squishConstant4D
+				dyExt1 = dyExt2
 			}
 
 			if (c & 0x04) == 0 {
-				zsv_ext2 = zsb
-				zsv_ext1 = zsv_ext2
-				zsv_ext0 = zsv_ext1
-				dz_ext0 = dz0 - 2*squishConstant4D
-				dz_ext2 = dz0 - squishConstant4D
-				dz_ext1 = dz_ext2
+				zsvExt2 = zsb
+				zsvExt1 = zsvExt2
+				zsvExt0 = zsvExt1
+				dzExt0 = dz0 - 2*squishConstant4D
+				dzExt2 = dz0 - squishConstant4D
+				dzExt1 = dzExt2
 				if (c & 0x03) == 0x03 {
-					zsv_ext1 -= 1
-					dz_ext1 += 1
+					zsvExt1 -= 1
+					dzExt1 += 1
 				} else {
-					zsv_ext2 -= 1
-					dz_ext2 += 1
+					zsvExt2 -= 1
+					dzExt2 += 1
 				}
 			} else {
-				zsv_ext2 = zsb + 1
-				zsv_ext1 = zsv_ext2
-				zsv_ext0 = zsv_ext1
-				dz_ext0 = dz0 - 1 - 2*squishConstant4D
-				dz_ext2 = dz0 - 1 - squishConstant4D
-				dz_ext1 = dz_ext2
+				zsvExt2 = zsb + 1
+				zsvExt1 = zsvExt2
+				zsvExt0 = zsvExt1
+				dzExt0 = dz0 - 1 - 2*squishConstant4D
+				dzExt2 = dz0 - 1 - squishConstant4D
+				dzExt1 = dzExt2
 			}
 
 			if (c & 0x08) == 0 {
-				wsv_ext1 = wsb
-				wsv_ext0 = wsv_ext1
-				wsv_ext2 = wsb - 1
-				dw_ext0 = dw0 - 2*squishConstant4D
-				dw_ext1 = dw0 - squishConstant4D
-				dw_ext2 = dw0 + 1 - squishConstant4D
+				wsvExt1 = wsb
+				wsvExt0 = wsvExt1
+				wsvExt2 = wsb - 1
+				dwExt0 = dw0 - 2*squishConstant4D
+				dwExt1 = dw0 - squishConstant4D
+				dwExt2 = dw0 + 1 - squishConstant4D
 			} else {
-				wsv_ext2 = wsb + 1
-				wsv_ext1 = wsv_ext2
-				wsv_ext0 = wsv_ext1
-				dw_ext0 = dw0 - 1 - 2*squishConstant4D
-				dw_ext2 = dw0 - 1 - squishConstant4D
-				dw_ext1 = dw_ext2
+				wsvExt2 = wsb + 1
+				wsvExt1 = wsvExt2
+				wsvExt0 = wsvExt1
+				dwExt0 = dw0 - 1 - 2*squishConstant4D
+				dwExt2 = dw0 - 1 - squishConstant4D
+				dwExt1 = dwExt2
 			}
 		}
 
@@ -1036,166 +1036,166 @@ func (s *noise) Eval4(x, y, z, w float64) float64 {
 			}
 
 			if (c & 0x01) != 0 {
-				xsv_ext0 = xsb + 2
-				xsv_ext2 = xsb + 1
-				xsv_ext1 = xsv_ext2
-				dx_ext0 = dx0 - 2 - 4*squishConstant4D
-				dx_ext2 = dx0 - 1 - 4*squishConstant4D
-				dx_ext1 = dx_ext2
+				xsvExt0 = xsb + 2
+				xsvExt2 = xsb + 1
+				xsvExt1 = xsvExt2
+				dxExt0 = dx0 - 2 - 4*squishConstant4D
+				dxExt2 = dx0 - 1 - 4*squishConstant4D
+				dxExt1 = dxExt2
 			} else {
-				xsv_ext2 = xsb
-				xsv_ext1 = xsv_ext2
-				xsv_ext0 = xsv_ext1
-				dx_ext2 = dx0 - 4*squishConstant4D
-				dx_ext1 = dx_ext2
-				dx_ext0 = dx_ext1
+				xsvExt2 = xsb
+				xsvExt1 = xsvExt2
+				xsvExt0 = xsvExt1
+				dxExt2 = dx0 - 4*squishConstant4D
+				dxExt1 = dxExt2
+				dxExt0 = dxExt1
 			}
 
 			if (c & 0x02) != 0 {
-				ysv_ext2 = ysb + 1
-				ysv_ext1 = ysv_ext2
-				ysv_ext0 = ysv_ext1
-				dy_ext2 = dy0 - 1 - 4*squishConstant4D
-				dy_ext1 = dy_ext2
-				dy_ext0 = dy_ext1
+				ysvExt2 = ysb + 1
+				ysvExt1 = ysvExt2
+				ysvExt0 = ysvExt1
+				dyExt2 = dy0 - 1 - 4*squishConstant4D
+				dyExt1 = dyExt2
+				dyExt0 = dyExt1
 				if (c & 0x01) != 0 {
-					ysv_ext1 += 1
-					dy_ext1 -= 1
+					ysvExt1 += 1
+					dyExt1 -= 1
 				} else {
-					ysv_ext0 += 1
-					dy_ext0 -= 1
+					ysvExt0 += 1
+					dyExt0 -= 1
 				}
 			} else {
-				ysv_ext2 = ysb
-				ysv_ext1 = ysv_ext2
-				ysv_ext0 = ysv_ext1
-				dy_ext2 = dy0 - 4*squishConstant4D
-				dy_ext1 = dy_ext2
-				dy_ext0 = dy_ext1
+				ysvExt2 = ysb
+				ysvExt1 = ysvExt2
+				ysvExt0 = ysvExt1
+				dyExt2 = dy0 - 4*squishConstant4D
+				dyExt1 = dyExt2
+				dyExt0 = dyExt1
 			}
 
 			if (c & 0x04) != 0 {
-				zsv_ext2 = zsb + 1
-				zsv_ext1 = zsv_ext2
-				zsv_ext0 = zsv_ext1
-				dz_ext2 = dz0 - 1 - 4*squishConstant4D
-				dz_ext1 = dz_ext2
-				dz_ext0 = dz_ext1
+				zsvExt2 = zsb + 1
+				zsvExt1 = zsvExt2
+				zsvExt0 = zsvExt1
+				dzExt2 = dz0 - 1 - 4*squishConstant4D
+				dzExt1 = dzExt2
+				dzExt0 = dzExt1
 				if (c & 0x03) != 0x03 {
 					if (c & 0x03) == 0 {
-						zsv_ext0 += 1
-						dz_ext0 -= 1
+						zsvExt0 += 1
+						dzExt0 -= 1
 					} else {
-						zsv_ext1 += 1
-						dz_ext1 -= 1
+						zsvExt1 += 1
+						dzExt1 -= 1
 					}
 				} else {
-					zsv_ext2 += 1
-					dz_ext2 -= 1
+					zsvExt2 += 1
+					dzExt2 -= 1
 				}
 			} else {
-				zsv_ext2 = zsb
-				zsv_ext1 = zsv_ext2
-				zsv_ext0 = zsv_ext1
-				dz_ext2 = dz0 - 4*squishConstant4D
-				dz_ext1 = dz_ext2
-				dz_ext0 = dz_ext1
+				zsvExt2 = zsb
+				zsvExt1 = zsvExt2
+				zsvExt0 = zsvExt1
+				dzExt2 = dz0 - 4*squishConstant4D
+				dzExt1 = dzExt2
+				dzExt0 = dzExt1
 			}
 
 			if (c & 0x08) != 0 {
-				wsv_ext1 = wsb + 1
-				wsv_ext0 = wsv_ext1
-				wsv_ext2 = wsb + 2
-				dw_ext1 = dw0 - 1 - 4*squishConstant4D
-				dw_ext0 = dw_ext1
-				dw_ext2 = dw0 - 2 - 4*squishConstant4D
+				wsvExt1 = wsb + 1
+				wsvExt0 = wsvExt1
+				wsvExt2 = wsb + 2
+				dwExt1 = dw0 - 1 - 4*squishConstant4D
+				dwExt0 = dwExt1
+				dwExt2 = dw0 - 2 - 4*squishConstant4D
 			} else {
-				wsv_ext2 = wsb
-				wsv_ext1 = wsv_ext2
-				wsv_ext0 = wsv_ext1
-				dw_ext2 = dw0 - 4*squishConstant4D
-				dw_ext1 = dw_ext2
-				dw_ext0 = dw_ext1
+				wsvExt2 = wsb
+				wsvExt1 = wsvExt2
+				wsvExt0 = wsvExt1
+				dwExt2 = dw0 - 4*squishConstant4D
+				dwExt1 = dwExt2
+				dwExt0 = dwExt1
 			}
 		} else { // (1,1,1,1) is not one of the closest two pentachoron vertices.
 			c := aPoint & bPoint // Our three extra vertices are determined by the closest two.
 
 			if (c & 0x01) != 0 {
-				xsv_ext2 = xsb + 1
-				xsv_ext0 = xsv_ext2
-				xsv_ext1 = xsb + 2
-				dx_ext0 = dx0 - 1 - 2*squishConstant4D
-				dx_ext1 = dx0 - 2 - 3*squishConstant4D
-				dx_ext2 = dx0 - 1 - 3*squishConstant4D
+				xsvExt2 = xsb + 1
+				xsvExt0 = xsvExt2
+				xsvExt1 = xsb + 2
+				dxExt0 = dx0 - 1 - 2*squishConstant4D
+				dxExt1 = dx0 - 2 - 3*squishConstant4D
+				dxExt2 = dx0 - 1 - 3*squishConstant4D
 			} else {
-				xsv_ext2 = xsb
-				xsv_ext1 = xsv_ext2
-				xsv_ext0 = xsv_ext1
-				dx_ext0 = dx0 - 2*squishConstant4D
-				dx_ext2 = dx0 - 3*squishConstant4D
-				dx_ext1 = dx_ext2
+				xsvExt2 = xsb
+				xsvExt1 = xsvExt2
+				xsvExt0 = xsvExt1
+				dxExt0 = dx0 - 2*squishConstant4D
+				dxExt2 = dx0 - 3*squishConstant4D
+				dxExt1 = dxExt2
 			}
 
 			if (c & 0x02) != 0 {
-				ysv_ext2 = ysb + 1
-				ysv_ext1 = ysv_ext2
-				ysv_ext0 = ysv_ext1
-				dy_ext0 = dy0 - 1 - 2*squishConstant4D
-				dy_ext2 = dy0 - 1 - 3*squishConstant4D
-				dy_ext1 = dy_ext2
+				ysvExt2 = ysb + 1
+				ysvExt1 = ysvExt2
+				ysvExt0 = ysvExt1
+				dyExt0 = dy0 - 1 - 2*squishConstant4D
+				dyExt2 = dy0 - 1 - 3*squishConstant4D
+				dyExt1 = dyExt2
 				if (c & 0x01) != 0 {
-					ysv_ext2 += 1
-					dy_ext2 -= 1
+					ysvExt2 += 1
+					dyExt2 -= 1
 				} else {
-					ysv_ext1 += 1
-					dy_ext1 -= 1
+					ysvExt1 += 1
+					dyExt1 -= 1
 				}
 			} else {
-				ysv_ext2 = ysb
-				ysv_ext1 = ysv_ext2
-				ysv_ext0 = ysv_ext1
-				dy_ext0 = dy0 - 2*squishConstant4D
-				dy_ext2 = dy0 - 3*squishConstant4D
-				dy_ext1 = dy_ext2
+				ysvExt2 = ysb
+				ysvExt1 = ysvExt2
+				ysvExt0 = ysvExt1
+				dyExt0 = dy0 - 2*squishConstant4D
+				dyExt2 = dy0 - 3*squishConstant4D
+				dyExt1 = dyExt2
 			}
 
 			if (c & 0x04) != 0 {
-				zsv_ext2 = zsb + 1
-				zsv_ext1 = zsv_ext2
-				zsv_ext0 = zsv_ext1
-				dz_ext0 = dz0 - 1 - 2*squishConstant4D
-				dz_ext2 = dz0 - 1 - 3*squishConstant4D
-				dz_ext1 = dz_ext2
+				zsvExt2 = zsb + 1
+				zsvExt1 = zsvExt2
+				zsvExt0 = zsvExt1
+				dzExt0 = dz0 - 1 - 2*squishConstant4D
+				dzExt2 = dz0 - 1 - 3*squishConstant4D
+				dzExt1 = dzExt2
 				if (c & 0x03) != 0 {
-					zsv_ext2 += 1
-					dz_ext2 -= 1
+					zsvExt2 += 1
+					dzExt2 -= 1
 				} else {
-					zsv_ext1 += 1
-					dz_ext1 -= 1
+					zsvExt1 += 1
+					dzExt1 -= 1
 				}
 			} else {
-				zsv_ext2 = zsb
-				zsv_ext1 = zsv_ext2
-				zsv_ext0 = zsv_ext1
-				dz_ext0 = dz0 - 2*squishConstant4D
-				dz_ext2 = dz0 - 3*squishConstant4D
-				dz_ext1 = dz_ext2
+				zsvExt2 = zsb
+				zsvExt1 = zsvExt2
+				zsvExt0 = zsvExt1
+				dzExt0 = dz0 - 2*squishConstant4D
+				dzExt2 = dz0 - 3*squishConstant4D
+				dzExt1 = dzExt2
 			}
 
 			if (c & 0x08) != 0 {
-				wsv_ext1 = wsb + 1
-				wsv_ext0 = wsv_ext1
-				wsv_ext2 = wsb + 2
-				dw_ext0 = dw0 - 1 - 2*squishConstant4D
-				dw_ext1 = dw0 - 1 - 3*squishConstant4D
-				dw_ext2 = dw0 - 2 - 3*squishConstant4D
+				wsvExt1 = wsb + 1
+				wsvExt0 = wsvExt1
+				wsvExt2 = wsb + 2
+				dwExt0 = dw0 - 1 - 2*squishConstant4D
+				dwExt1 = dw0 - 1 - 3*squishConstant4D
+				dwExt2 = dw0 - 2 - 3*squishConstant4D
 			} else {
-				wsv_ext2 = wsb
-				wsv_ext1 = wsv_ext2
-				wsv_ext0 = wsv_ext1
-				dw_ext0 = dw0 - 2*squishConstant4D
-				dw_ext2 = dw0 - 3*squishConstant4D
-				dw_ext1 = dw_ext2
+				wsvExt2 = wsb
+				wsvExt1 = wsvExt2
+				wsvExt0 = wsvExt1
+				dwExt0 = dw0 - 2*squishConstant4D
+				dwExt2 = dw0 - 3*squishConstant4D
+				dwExt1 = dwExt2
 			}
 		}
 
@@ -1351,150 +1351,150 @@ func (s *noise) Eval4(x, y, z, w float64) float64 {
 				c1 := aPoint | bPoint
 				c2 := aPoint & bPoint
 				if (c1 & 0x01) == 0 {
-					xsv_ext0 = xsb
-					xsv_ext1 = xsb - 1
-					dx_ext0 = dx0 - 3*squishConstant4D
-					dx_ext1 = dx0 + 1 - 2*squishConstant4D
+					xsvExt0 = xsb
+					xsvExt1 = xsb - 1
+					dxExt0 = dx0 - 3*squishConstant4D
+					dxExt1 = dx0 + 1 - 2*squishConstant4D
 				} else {
-					xsv_ext1 = xsb + 1
-					xsv_ext0 = xsv_ext1
-					dx_ext0 = dx0 - 1 - 3*squishConstant4D
-					dx_ext1 = dx0 - 1 - 2*squishConstant4D
+					xsvExt1 = xsb + 1
+					xsvExt0 = xsvExt1
+					dxExt0 = dx0 - 1 - 3*squishConstant4D
+					dxExt1 = dx0 - 1 - 2*squishConstant4D
 				}
 
 				if (c1 & 0x02) == 0 {
-					ysv_ext0 = ysb
-					ysv_ext1 = ysb - 1
-					dy_ext0 = dy0 - 3*squishConstant4D
-					dy_ext1 = dy0 + 1 - 2*squishConstant4D
+					ysvExt0 = ysb
+					ysvExt1 = ysb - 1
+					dyExt0 = dy0 - 3*squishConstant4D
+					dyExt1 = dy0 + 1 - 2*squishConstant4D
 				} else {
-					ysv_ext1 = ysb + 1
-					ysv_ext0 = ysv_ext1
-					dy_ext0 = dy0 - 1 - 3*squishConstant4D
-					dy_ext1 = dy0 - 1 - 2*squishConstant4D
+					ysvExt1 = ysb + 1
+					ysvExt0 = ysvExt1
+					dyExt0 = dy0 - 1 - 3*squishConstant4D
+					dyExt1 = dy0 - 1 - 2*squishConstant4D
 				}
 
 				if (c1 & 0x04) == 0 {
-					zsv_ext0 = zsb
-					zsv_ext1 = zsb - 1
-					dz_ext0 = dz0 - 3*squishConstant4D
-					dz_ext1 = dz0 + 1 - 2*squishConstant4D
+					zsvExt0 = zsb
+					zsvExt1 = zsb - 1
+					dzExt0 = dz0 - 3*squishConstant4D
+					dzExt1 = dz0 + 1 - 2*squishConstant4D
 				} else {
-					zsv_ext1 = zsb + 1
-					zsv_ext0 = zsv_ext1
-					dz_ext0 = dz0 - 1 - 3*squishConstant4D
-					dz_ext1 = dz0 - 1 - 2*squishConstant4D
+					zsvExt1 = zsb + 1
+					zsvExt0 = zsvExt1
+					dzExt0 = dz0 - 1 - 3*squishConstant4D
+					dzExt1 = dz0 - 1 - 2*squishConstant4D
 				}
 
 				if (c1 & 0x08) == 0 {
-					wsv_ext0 = wsb
-					wsv_ext1 = wsb - 1
-					dw_ext0 = dw0 - 3*squishConstant4D
-					dw_ext1 = dw0 + 1 - 2*squishConstant4D
+					wsvExt0 = wsb
+					wsvExt1 = wsb - 1
+					dwExt0 = dw0 - 3*squishConstant4D
+					dwExt1 = dw0 + 1 - 2*squishConstant4D
 				} else {
-					wsv_ext1 = wsb + 1
-					wsv_ext0 = wsv_ext1
-					dw_ext0 = dw0 - 1 - 3*squishConstant4D
-					dw_ext1 = dw0 - 1 - 2*squishConstant4D
+					wsvExt1 = wsb + 1
+					wsvExt0 = wsvExt1
+					dwExt0 = dw0 - 1 - 3*squishConstant4D
+					dwExt1 = dw0 - 1 - 2*squishConstant4D
 				}
 
 				// One combination is a permutation of (0,0,0,2) based on c2
-				xsv_ext2 = xsb
-				ysv_ext2 = ysb
-				zsv_ext2 = zsb
-				wsv_ext2 = wsb
-				dx_ext2 = dx0 - 2*squishConstant4D
-				dy_ext2 = dy0 - 2*squishConstant4D
-				dz_ext2 = dz0 - 2*squishConstant4D
-				dw_ext2 = dw0 - 2*squishConstant4D
+				xsvExt2 = xsb
+				ysvExt2 = ysb
+				zsvExt2 = zsb
+				wsvExt2 = wsb
+				dxExt2 = dx0 - 2*squishConstant4D
+				dyExt2 = dy0 - 2*squishConstant4D
+				dzExt2 = dz0 - 2*squishConstant4D
+				dwExt2 = dw0 - 2*squishConstant4D
 				if (c2 & 0x01) != 0 {
-					xsv_ext2 += 2
-					dx_ext2 -= 2
+					xsvExt2 += 2
+					dxExt2 -= 2
 				} else if (c2 & 0x02) != 0 {
-					ysv_ext2 += 2
-					dy_ext2 -= 2
+					ysvExt2 += 2
+					dyExt2 -= 2
 				} else if (c2 & 0x04) != 0 {
-					zsv_ext2 += 2
-					dz_ext2 -= 2
+					zsvExt2 += 2
+					dzExt2 -= 2
 				} else {
-					wsv_ext2 += 2
-					dw_ext2 -= 2
+					wsvExt2 += 2
+					dwExt2 -= 2
 				}
 
 			} else { // Both closest points on the smaller side
 				// One of the two extra points is (0,0,0,0)
-				xsv_ext2 = xsb
-				ysv_ext2 = ysb
-				zsv_ext2 = zsb
-				wsv_ext2 = wsb
-				dx_ext2 = dx0
-				dy_ext2 = dy0
-				dz_ext2 = dz0
-				dw_ext2 = dw0
+				xsvExt2 = xsb
+				ysvExt2 = ysb
+				zsvExt2 = zsb
+				wsvExt2 = wsb
+				dxExt2 = dx0
+				dyExt2 = dy0
+				dzExt2 = dz0
+				dwExt2 = dw0
 
 				// Other two points are based on the omitted axes.
 				c := aPoint | bPoint
 
 				if (c & 0x01) == 0 {
-					xsv_ext0 = xsb - 1
-					xsv_ext1 = xsb
-					dx_ext0 = dx0 + 1 - squishConstant4D
-					dx_ext1 = dx0 - squishConstant4D
+					xsvExt0 = xsb - 1
+					xsvExt1 = xsb
+					dxExt0 = dx0 + 1 - squishConstant4D
+					dxExt1 = dx0 - squishConstant4D
 				} else {
-					xsv_ext1 = xsb + 1
-					xsv_ext0 = xsv_ext1
-					dx_ext1 = dx0 - 1 - squishConstant4D
-					dx_ext0 = dx_ext1
+					xsvExt1 = xsb + 1
+					xsvExt0 = xsvExt1
+					dxExt1 = dx0 - 1 - squishConstant4D
+					dxExt0 = dxExt1
 				}
 
 				if (c & 0x02) == 0 {
-					ysv_ext1 = ysb
-					ysv_ext0 = ysv_ext1
-					dy_ext1 = dy0 - squishConstant4D
-					dy_ext0 = dy_ext1
+					ysvExt1 = ysb
+					ysvExt0 = ysvExt1
+					dyExt1 = dy0 - squishConstant4D
+					dyExt0 = dyExt1
 					if (c & 0x01) == 0x01 {
-						ysv_ext0 -= 1
-						dy_ext0 += 1
+						ysvExt0 -= 1
+						dyExt0 += 1
 					} else {
-						ysv_ext1 -= 1
-						dy_ext1 += 1
+						ysvExt1 -= 1
+						dyExt1 += 1
 					}
 				} else {
-					ysv_ext1 = ysb + 1
-					ysv_ext0 = ysv_ext1
-					dy_ext1 = dy0 - 1 - squishConstant4D
-					dy_ext0 = dy_ext1
+					ysvExt1 = ysb + 1
+					ysvExt0 = ysvExt1
+					dyExt1 = dy0 - 1 - squishConstant4D
+					dyExt0 = dyExt1
 				}
 
 				if (c & 0x04) == 0 {
-					zsv_ext1 = zsb
-					zsv_ext0 = zsv_ext1
-					dz_ext1 = dz0 - squishConstant4D
-					dz_ext0 = dz_ext1
+					zsvExt1 = zsb
+					zsvExt0 = zsvExt1
+					dzExt1 = dz0 - squishConstant4D
+					dzExt0 = dzExt1
 					if (c & 0x03) == 0x03 {
-						zsv_ext0 -= 1
-						dz_ext0 += 1
+						zsvExt0 -= 1
+						dzExt0 += 1
 					} else {
-						zsv_ext1 -= 1
-						dz_ext1 += 1
+						zsvExt1 -= 1
+						dzExt1 += 1
 					}
 				} else {
-					zsv_ext1 = zsb + 1
-					zsv_ext0 = zsv_ext1
-					dz_ext1 = dz0 - 1 - squishConstant4D
-					dz_ext0 = dz_ext1
+					zsvExt1 = zsb + 1
+					zsvExt0 = zsvExt1
+					dzExt1 = dz0 - 1 - squishConstant4D
+					dzExt0 = dzExt1
 				}
 
 				if (c & 0x08) == 0 {
-					wsv_ext0 = wsb
-					wsv_ext1 = wsb - 1
-					dw_ext0 = dw0 - squishConstant4D
-					dw_ext1 = dw0 + 1 - squishConstant4D
+					wsvExt0 = wsb
+					wsvExt1 = wsb - 1
+					dwExt0 = dw0 - squishConstant4D
+					dwExt1 = dw0 + 1 - squishConstant4D
 				} else {
-					wsv_ext1 = wsb + 1
-					wsv_ext0 = wsv_ext1
-					dw_ext1 = dw0 - 1 - squishConstant4D
-					dw_ext0 = dw_ext1
+					wsvExt1 = wsb + 1
+					wsvExt0 = wsvExt1
+					dwExt1 = dw0 - 1 - squishConstant4D
+					dwExt0 = dwExt1
 				}
 
 			}
@@ -1510,88 +1510,88 @@ func (s *noise) Eval4(x, y, z, w float64) float64 {
 
 			// Two contributions are the bigger-sided point with each 0 replaced with -1.
 			if (c1 & 0x01) == 0 {
-				xsv_ext0 = xsb - 1
-				xsv_ext1 = xsb
-				dx_ext0 = dx0 + 1 - squishConstant4D
-				dx_ext1 = dx0 - squishConstant4D
+				xsvExt0 = xsb - 1
+				xsvExt1 = xsb
+				dxExt0 = dx0 + 1 - squishConstant4D
+				dxExt1 = dx0 - squishConstant4D
 			} else {
-				xsv_ext1 = xsb + 1
-				xsv_ext0 = xsv_ext1
-				dx_ext1 = dx0 - 1 - squishConstant4D
-				dx_ext0 = dx_ext1
+				xsvExt1 = xsb + 1
+				xsvExt0 = xsvExt1
+				dxExt1 = dx0 - 1 - squishConstant4D
+				dxExt0 = dxExt1
 			}
 
 			if (c1 & 0x02) == 0 {
-				ysv_ext1 = ysb
-				ysv_ext0 = ysv_ext1
-				dy_ext1 = dy0 - squishConstant4D
-				dy_ext0 = dy_ext1
+				ysvExt1 = ysb
+				ysvExt0 = ysvExt1
+				dyExt1 = dy0 - squishConstant4D
+				dyExt0 = dyExt1
 				if (c1 & 0x01) == 0x01 {
-					ysv_ext0 -= 1
-					dy_ext0 += 1
+					ysvExt0 -= 1
+					dyExt0 += 1
 				} else {
-					ysv_ext1 -= 1
-					dy_ext1 += 1
+					ysvExt1 -= 1
+					dyExt1 += 1
 				}
 			} else {
-				ysv_ext1 = ysb + 1
-				ysv_ext0 = ysv_ext1
-				dy_ext1 = dy0 - 1 - squishConstant4D
-				dy_ext0 = dy_ext1
+				ysvExt1 = ysb + 1
+				ysvExt0 = ysvExt1
+				dyExt1 = dy0 - 1 - squishConstant4D
+				dyExt0 = dyExt1
 			}
 
 			if (c1 & 0x04) == 0 {
-				zsv_ext1 = zsb
-				zsv_ext0 = zsv_ext1
-				dz_ext1 = dz0 - squishConstant4D
-				dz_ext0 = dz_ext1
+				zsvExt1 = zsb
+				zsvExt0 = zsvExt1
+				dzExt1 = dz0 - squishConstant4D
+				dzExt0 = dzExt1
 				if (c1 & 0x03) == 0x03 {
-					zsv_ext0 -= 1
-					dz_ext0 += 1
+					zsvExt0 -= 1
+					dzExt0 += 1
 				} else {
-					zsv_ext1 -= 1
-					dz_ext1 += 1
+					zsvExt1 -= 1
+					dzExt1 += 1
 				}
 			} else {
-				zsv_ext1 = zsb + 1
-				zsv_ext0 = zsv_ext1
-				dz_ext1 = dz0 - 1 - squishConstant4D
-				dz_ext0 = dz_ext1
+				zsvExt1 = zsb + 1
+				zsvExt0 = zsvExt1
+				dzExt1 = dz0 - 1 - squishConstant4D
+				dzExt0 = dzExt1
 			}
 
 			if (c1 & 0x08) == 0 {
-				wsv_ext0 = wsb
-				wsv_ext1 = wsb - 1
-				dw_ext0 = dw0 - squishConstant4D
-				dw_ext1 = dw0 + 1 - squishConstant4D
+				wsvExt0 = wsb
+				wsvExt1 = wsb - 1
+				dwExt0 = dw0 - squishConstant4D
+				dwExt1 = dw0 + 1 - squishConstant4D
 			} else {
-				wsv_ext1 = wsb + 1
-				wsv_ext0 = wsv_ext1
-				dw_ext1 = dw0 - 1 - squishConstant4D
-				dw_ext0 = dw_ext1
+				wsvExt1 = wsb + 1
+				wsvExt0 = wsvExt1
+				dwExt1 = dw0 - 1 - squishConstant4D
+				dwExt0 = dwExt1
 			}
 
 			// One contribution is a permutation of (0,0,0,2) based on the smaller-sided point
-			xsv_ext2 = xsb
-			ysv_ext2 = ysb
-			zsv_ext2 = zsb
-			wsv_ext2 = wsb
-			dx_ext2 = dx0 - 2*squishConstant4D
-			dy_ext2 = dy0 - 2*squishConstant4D
-			dz_ext2 = dz0 - 2*squishConstant4D
-			dw_ext2 = dw0 - 2*squishConstant4D
+			xsvExt2 = xsb
+			ysvExt2 = ysb
+			zsvExt2 = zsb
+			wsvExt2 = wsb
+			dxExt2 = dx0 - 2*squishConstant4D
+			dyExt2 = dy0 - 2*squishConstant4D
+			dzExt2 = dz0 - 2*squishConstant4D
+			dwExt2 = dw0 - 2*squishConstant4D
 			if (c2 & 0x01) != 0 {
-				xsv_ext2 += 2
-				dx_ext2 -= 2
+				xsvExt2 += 2
+				dxExt2 -= 2
 			} else if (c2 & 0x02) != 0 {
-				ysv_ext2 += 2
-				dy_ext2 -= 2
+				ysvExt2 += 2
+				dyExt2 -= 2
 			} else if (c2 & 0x04) != 0 {
-				zsv_ext2 += 2
-				dz_ext2 -= 2
+				zsvExt2 += 2
+				dzExt2 -= 2
 			} else {
-				wsv_ext2 += 2
-				dw_ext2 -= 2
+				wsvExt2 += 2
+				dwExt2 -= 2
 			}
 		}
 
@@ -1803,140 +1803,140 @@ func (s *noise) Eval4(x, y, z, w float64) float64 {
 				c2 := aPoint | bPoint
 
 				// Two contributions are permutations of (0,0,0,1) and (0,0,0,2) based on c1
-				xsv_ext1 = xsb
-				xsv_ext0 = xsv_ext1
-				ysv_ext1 = ysb
-				ysv_ext0 = ysv_ext1
-				zsv_ext1 = zsb
-				zsv_ext0 = zsv_ext1
-				wsv_ext1 = wsb
-				wsv_ext0 = wsv_ext1
-				dx_ext0 = dx0 - squishConstant4D
-				dy_ext0 = dy0 - squishConstant4D
-				dz_ext0 = dz0 - squishConstant4D
-				dw_ext0 = dw0 - squishConstant4D
-				dx_ext1 = dx0 - 2*squishConstant4D
-				dy_ext1 = dy0 - 2*squishConstant4D
-				dz_ext1 = dz0 - 2*squishConstant4D
-				dw_ext1 = dw0 - 2*squishConstant4D
+				xsvExt1 = xsb
+				xsvExt0 = xsvExt1
+				ysvExt1 = ysb
+				ysvExt0 = ysvExt1
+				zsvExt1 = zsb
+				zsvExt0 = zsvExt1
+				wsvExt1 = wsb
+				wsvExt0 = wsvExt1
+				dxExt0 = dx0 - squishConstant4D
+				dyExt0 = dy0 - squishConstant4D
+				dzExt0 = dz0 - squishConstant4D
+				dwExt0 = dw0 - squishConstant4D
+				dxExt1 = dx0 - 2*squishConstant4D
+				dyExt1 = dy0 - 2*squishConstant4D
+				dzExt1 = dz0 - 2*squishConstant4D
+				dwExt1 = dw0 - 2*squishConstant4D
 				if (c1 & 0x01) != 0 {
-					xsv_ext0 += 1
-					dx_ext0 -= 1
-					xsv_ext1 += 2
-					dx_ext1 -= 2
+					xsvExt0 += 1
+					dxExt0 -= 1
+					xsvExt1 += 2
+					dxExt1 -= 2
 				} else if (c1 & 0x02) != 0 {
-					ysv_ext0 += 1
-					dy_ext0 -= 1
-					ysv_ext1 += 2
-					dy_ext1 -= 2
+					ysvExt0 += 1
+					dyExt0 -= 1
+					ysvExt1 += 2
+					dyExt1 -= 2
 				} else if (c1 & 0x04) != 0 {
-					zsv_ext0 += 1
-					dz_ext0 -= 1
-					zsv_ext1 += 2
-					dz_ext1 -= 2
+					zsvExt0 += 1
+					dzExt0 -= 1
+					zsvExt1 += 2
+					dzExt1 -= 2
 				} else {
-					wsv_ext0 += 1
-					dw_ext0 -= 1
-					wsv_ext1 += 2
-					dw_ext1 -= 2
+					wsvExt0 += 1
+					dwExt0 -= 1
+					wsvExt1 += 2
+					dwExt1 -= 2
 				}
 
 				// One contribution is a permutation of (1,1,1,-1) based on c2
-				xsv_ext2 = xsb + 1
-				ysv_ext2 = ysb + 1
-				zsv_ext2 = zsb + 1
-				wsv_ext2 = wsb + 1
-				dx_ext2 = dx0 - 1 - 2*squishConstant4D
-				dy_ext2 = dy0 - 1 - 2*squishConstant4D
-				dz_ext2 = dz0 - 1 - 2*squishConstant4D
-				dw_ext2 = dw0 - 1 - 2*squishConstant4D
+				xsvExt2 = xsb + 1
+				ysvExt2 = ysb + 1
+				zsvExt2 = zsb + 1
+				wsvExt2 = wsb + 1
+				dxExt2 = dx0 - 1 - 2*squishConstant4D
+				dyExt2 = dy0 - 1 - 2*squishConstant4D
+				dzExt2 = dz0 - 1 - 2*squishConstant4D
+				dwExt2 = dw0 - 1 - 2*squishConstant4D
 				if (c2 & 0x01) == 0 {
-					xsv_ext2 -= 2
-					dx_ext2 += 2
+					xsvExt2 -= 2
+					dxExt2 += 2
 				} else if (c2 & 0x02) == 0 {
-					ysv_ext2 -= 2
-					dy_ext2 += 2
+					ysvExt2 -= 2
+					dyExt2 += 2
 				} else if (c2 & 0x04) == 0 {
-					zsv_ext2 -= 2
-					dz_ext2 += 2
+					zsvExt2 -= 2
+					dzExt2 += 2
 				} else {
-					wsv_ext2 -= 2
-					dw_ext2 += 2
+					wsvExt2 -= 2
+					dwExt2 += 2
 				}
 			} else { // Both closest points on the smaller side
 				// One of the two extra points is (1,1,1,1)
-				xsv_ext2 = xsb + 1
-				ysv_ext2 = ysb + 1
-				zsv_ext2 = zsb + 1
-				wsv_ext2 = wsb + 1
-				dx_ext2 = dx0 - 1 - 4*squishConstant4D
-				dy_ext2 = dy0 - 1 - 4*squishConstant4D
-				dz_ext2 = dz0 - 1 - 4*squishConstant4D
-				dw_ext2 = dw0 - 1 - 4*squishConstant4D
+				xsvExt2 = xsb + 1
+				ysvExt2 = ysb + 1
+				zsvExt2 = zsb + 1
+				wsvExt2 = wsb + 1
+				dxExt2 = dx0 - 1 - 4*squishConstant4D
+				dyExt2 = dy0 - 1 - 4*squishConstant4D
+				dzExt2 = dz0 - 1 - 4*squishConstant4D
+				dwExt2 = dw0 - 1 - 4*squishConstant4D
 
 				// Other two points are based on the shared axes.
 				c := aPoint & bPoint
 
 				if (c & 0x01) != 0 {
-					xsv_ext0 = xsb + 2
-					xsv_ext1 = xsb + 1
-					dx_ext0 = dx0 - 2 - 3*squishConstant4D
-					dx_ext1 = dx0 - 1 - 3*squishConstant4D
+					xsvExt0 = xsb + 2
+					xsvExt1 = xsb + 1
+					dxExt0 = dx0 - 2 - 3*squishConstant4D
+					dxExt1 = dx0 - 1 - 3*squishConstant4D
 				} else {
-					xsv_ext1 = xsb
-					xsv_ext0 = xsv_ext1
-					dx_ext1 = dx0 - 3*squishConstant4D
-					dx_ext0 = dx_ext1
+					xsvExt1 = xsb
+					xsvExt0 = xsvExt1
+					dxExt1 = dx0 - 3*squishConstant4D
+					dxExt0 = dxExt1
 				}
 
 				if (c & 0x02) != 0 {
-					ysv_ext1 = ysb + 1
-					ysv_ext0 = ysv_ext1
-					dy_ext1 = dy0 - 1 - 3*squishConstant4D
-					dy_ext0 = dy_ext1
+					ysvExt1 = ysb + 1
+					ysvExt0 = ysvExt1
+					dyExt1 = dy0 - 1 - 3*squishConstant4D
+					dyExt0 = dyExt1
 					if (c & 0x01) == 0 {
-						ysv_ext0 += 1
-						dy_ext0 -= 1
+						ysvExt0 += 1
+						dyExt0 -= 1
 					} else {
-						ysv_ext1 += 1
-						dy_ext1 -= 1
+						ysvExt1 += 1
+						dyExt1 -= 1
 					}
 				} else {
-					ysv_ext1 = ysb
-					ysv_ext0 = ysv_ext1
-					dy_ext1 = dy0 - 3*squishConstant4D
-					dy_ext0 = dy_ext1
+					ysvExt1 = ysb
+					ysvExt0 = ysvExt1
+					dyExt1 = dy0 - 3*squishConstant4D
+					dyExt0 = dyExt1
 				}
 
 				if (c & 0x04) != 0 {
-					zsv_ext1 = zsb + 1
-					zsv_ext0 = zsv_ext1
-					dz_ext1 = dz0 - 1 - 3*squishConstant4D
-					dz_ext0 = dz_ext1
+					zsvExt1 = zsb + 1
+					zsvExt0 = zsvExt1
+					dzExt1 = dz0 - 1 - 3*squishConstant4D
+					dzExt0 = dzExt1
 					if (c & 0x03) == 0 {
-						zsv_ext0 += 1
-						dz_ext0 -= 1
+						zsvExt0 += 1
+						dzExt0 -= 1
 					} else {
-						zsv_ext1 += 1
-						dz_ext1 -= 1
+						zsvExt1 += 1
+						dzExt1 -= 1
 					}
 				} else {
-					zsv_ext1 = zsb
-					zsv_ext0 = zsv_ext1
-					dz_ext1 = dz0 - 3*squishConstant4D
-					dz_ext0 = dz_ext1
+					zsvExt1 = zsb
+					zsvExt0 = zsvExt1
+					dzExt1 = dz0 - 3*squishConstant4D
+					dzExt0 = dzExt1
 				}
 
 				if (c & 0x08) != 0 {
-					wsv_ext0 = wsb + 1
-					wsv_ext1 = wsb + 2
-					dw_ext0 = dw0 - 1 - 3*squishConstant4D
-					dw_ext1 = dw0 - 2 - 3*squishConstant4D
+					wsvExt0 = wsb + 1
+					wsvExt1 = wsb + 2
+					dwExt0 = dw0 - 1 - 3*squishConstant4D
+					dwExt1 = dw0 - 2 - 3*squishConstant4D
 				} else {
-					wsv_ext1 = wsb
-					wsv_ext0 = wsv_ext1
-					dw_ext1 = dw0 - 3*squishConstant4D
-					dw_ext0 = dw_ext1
+					wsvExt1 = wsb
+					wsvExt0 = wsvExt1
+					dwExt1 = dw0 - 3*squishConstant4D
+					dwExt0 = dwExt1
 				}
 			}
 		} else { // One point on each "side"
@@ -1951,88 +1951,88 @@ func (s *noise) Eval4(x, y, z, w float64) float64 {
 
 			// Two contributions are the bigger-sided point with each 1 replaced with 2.
 			if (c1 & 0x01) != 0 {
-				xsv_ext0 = xsb + 2
-				xsv_ext1 = xsb + 1
-				dx_ext0 = dx0 - 2 - 3*squishConstant4D
-				dx_ext1 = dx0 - 1 - 3*squishConstant4D
+				xsvExt0 = xsb + 2
+				xsvExt1 = xsb + 1
+				dxExt0 = dx0 - 2 - 3*squishConstant4D
+				dxExt1 = dx0 - 1 - 3*squishConstant4D
 			} else {
-				xsv_ext1 = xsb
-				xsv_ext0 = xsv_ext1
-				dx_ext1 = dx0 - 3*squishConstant4D
-				dx_ext0 = dx_ext1
+				xsvExt1 = xsb
+				xsvExt0 = xsvExt1
+				dxExt1 = dx0 - 3*squishConstant4D
+				dxExt0 = dxExt1
 			}
 
 			if (c1 & 0x02) != 0 {
-				ysv_ext1 = ysb + 1
-				ysv_ext0 = ysv_ext1
-				dy_ext1 = dy0 - 1 - 3*squishConstant4D
-				dy_ext0 = dy_ext1
+				ysvExt1 = ysb + 1
+				ysvExt0 = ysvExt1
+				dyExt1 = dy0 - 1 - 3*squishConstant4D
+				dyExt0 = dyExt1
 				if (c1 & 0x01) == 0 {
-					ysv_ext0 += 1
-					dy_ext0 -= 1
+					ysvExt0 += 1
+					dyExt0 -= 1
 				} else {
-					ysv_ext1 += 1
-					dy_ext1 -= 1
+					ysvExt1 += 1
+					dyExt1 -= 1
 				}
 			} else {
-				ysv_ext1 = ysb
-				ysv_ext0 = ysv_ext1
-				dy_ext1 = dy0 - 3*squishConstant4D
-				dy_ext0 = dy_ext1
+				ysvExt1 = ysb
+				ysvExt0 = ysvExt1
+				dyExt1 = dy0 - 3*squishConstant4D
+				dyExt0 = dyExt1
 			}
 
 			if (c1 & 0x04) != 0 {
-				zsv_ext1 = zsb + 1
-				zsv_ext0 = zsv_ext1
-				dz_ext1 = dz0 - 1 - 3*squishConstant4D
-				dz_ext0 = dz_ext1
+				zsvExt1 = zsb + 1
+				zsvExt0 = zsvExt1
+				dzExt1 = dz0 - 1 - 3*squishConstant4D
+				dzExt0 = dzExt1
 				if (c1 & 0x03) == 0 {
-					zsv_ext0 += 1
-					dz_ext0 -= 1
+					zsvExt0 += 1
+					dzExt0 -= 1
 				} else {
-					zsv_ext1 += 1
-					dz_ext1 -= 1
+					zsvExt1 += 1
+					dzExt1 -= 1
 				}
 			} else {
-				zsv_ext1 = zsb
-				zsv_ext0 = zsv_ext1
-				dz_ext1 = dz0 - 3*squishConstant4D
-				dz_ext0 = dz_ext1
+				zsvExt1 = zsb
+				zsvExt0 = zsvExt1
+				dzExt1 = dz0 - 3*squishConstant4D
+				dzExt0 = dzExt1
 			}
 
 			if (c1 & 0x08) != 0 {
-				wsv_ext0 = wsb + 1
-				wsv_ext1 = wsb + 2
-				dw_ext0 = dw0 - 1 - 3*squishConstant4D
-				dw_ext1 = dw0 - 2 - 3*squishConstant4D
+				wsvExt0 = wsb + 1
+				wsvExt1 = wsb + 2
+				dwExt0 = dw0 - 1 - 3*squishConstant4D
+				dwExt1 = dw0 - 2 - 3*squishConstant4D
 			} else {
-				wsv_ext1 = wsb
-				wsv_ext0 = wsv_ext1
-				dw_ext1 = dw0 - 3*squishConstant4D
-				dw_ext0 = dw_ext1
+				wsvExt1 = wsb
+				wsvExt0 = wsvExt1
+				dwExt1 = dw0 - 3*squishConstant4D
+				dwExt0 = dwExt1
 			}
 
 			// One contribution is a permutation of (1,1,1,-1) based on the smaller-sided point
-			xsv_ext2 = xsb + 1
-			ysv_ext2 = ysb + 1
-			zsv_ext2 = zsb + 1
-			wsv_ext2 = wsb + 1
-			dx_ext2 = dx0 - 1 - 2*squishConstant4D
-			dy_ext2 = dy0 - 1 - 2*squishConstant4D
-			dz_ext2 = dz0 - 1 - 2*squishConstant4D
-			dw_ext2 = dw0 - 1 - 2*squishConstant4D
+			xsvExt2 = xsb + 1
+			ysvExt2 = ysb + 1
+			zsvExt2 = zsb + 1
+			wsvExt2 = wsb + 1
+			dxExt2 = dx0 - 1 - 2*squishConstant4D
+			dyExt2 = dy0 - 1 - 2*squishConstant4D
+			dzExt2 = dz0 - 1 - 2*squishConstant4D
+			dwExt2 = dw0 - 1 - 2*squishConstant4D
 			if (c2 & 0x01) == 0 {
-				xsv_ext2 -= 2
-				dx_ext2 += 2
+				xsvExt2 -= 2
+				dxExt2 += 2
 			} else if (c2 & 0x02) == 0 {
-				ysv_ext2 -= 2
-				dy_ext2 += 2
+				ysvExt2 -= 2
+				dyExt2 += 2
 			} else if (c2 & 0x04) == 0 {
-				zsv_ext2 -= 2
-				dz_ext2 += 2
+				zsvExt2 -= 2
+				dzExt2 += 2
 			} else {
-				wsv_ext2 -= 2
-				dw_ext2 += 2
+				wsvExt2 -= 2
+				dwExt2 += 2
 			}
 		}
 
@@ -2148,24 +2148,24 @@ func (s *noise) Eval4(x, y, z, w float64) float64 {
 	}
 
 	// First extra vertex
-	attn_ext0 := 2 - dx_ext0*dx_ext0 - dy_ext0*dy_ext0 - dz_ext0*dz_ext0 - dw_ext0*dw_ext0
-	if attn_ext0 > 0 {
-		attn_ext0 *= attn_ext0
-		value += attn_ext0 * attn_ext0 * s.extrapolate4(xsv_ext0, ysv_ext0, zsv_ext0, wsv_ext0, dx_ext0, dy_ext0, dz_ext0, dw_ext0)
+	attnExt0 := 2 - dxExt0*dxExt0 - dyExt0*dyExt0 - dzExt0*dzExt0 - dwExt0*dwExt0
+	if attnExt0 > 0 {
+		attnExt0 *= attnExt0
+		value += attnExt0 * attnExt0 * s.extrapolate4(xsvExt0, ysvExt0, zsvExt0, wsvExt0, dxExt0, dyExt0, dzExt0, dwExt0)
 	}
 
 	// Second extra vertex
-	attn_ext1 := 2 - dx_ext1*dx_ext1 - dy_ext1*dy_ext1 - dz_ext1*dz_ext1 - dw_ext1*dw_ext1
-	if attn_ext1 > 0 {
-		attn_ext1 *= attn_ext1
-		value += attn_ext1 * attn_ext1 * s.extrapolate4(xsv_ext1, ysv_ext1, zsv_ext1, wsv_ext1, dx_ext1, dy_ext1, dz_ext1, dw_ext1)
+	attnExt1 := 2 - dxExt1*dxExt1 - dyExt1*dyExt1 - dzExt1*dzExt1 - dwExt1*dwExt1
+	if attnExt1 > 0 {
+		attnExt1 *= attnExt1
+		value += attnExt1 * attnExt1 * s.extrapolate4(xsvExt1, ysvExt1, zsvExt1, wsvExt1, dxExt1, dyExt1, dzExt1, dwExt1)
 	}
 
 	// Third extra vertex
-	attn_ext2 := 2 - dx_ext2*dx_ext2 - dy_ext2*dy_ext2 - dz_ext2*dz_ext2 - dw_ext2*dw_ext2
-	if attn_ext2 > 0 {
-		attn_ext2 *= attn_ext2
-		value += attn_ext2 * attn_ext2 * s.extrapolate4(xsv_ext2, ysv_ext2, zsv_ext2, wsv_ext2, dx_ext2, dy_ext2, dz_ext2, dw_ext2)
+	attnExt2 := 2 - dxExt2*dxExt2 - dyExt2*dyExt2 - dzExt2*dzExt2 - dwExt2*dwExt2
+	if attnExt2 > 0 {
+		attnExt2 *= attnExt2
+		value += attnExt2 * attnExt2 * s.extrapolate4(xsvExt2, ysvExt2, zsvExt2, wsvExt2, dxExt2, dyExt2, dzExt2, dwExt2)
 	}
 
 	return value / normConstant4D

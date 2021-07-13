@@ -30,7 +30,7 @@ func (s *noise) extrapolate4(xsb, ysb, zsb, wsb int32, dx, dy, dz, dw float64) f
 
 // Gradients for 2D. They approximate the directions to the
 // vertices of an octagon from the center.
-var gradients2D = []int8{
+var gradients2D = [16]int8{
 	5, 2, 2, 5,
 	-5, 2, -2, 5,
 	5, -2, 2, -5,
@@ -41,7 +41,7 @@ var gradients2D = []int8{
 // vertices of a rhombicuboctahedron from the center, skewed so
 // that the triangular and square facets can be inscribed inside
 // circles of the same radius.
-var gradients3D = []int8{
+var gradients3D = [72]int8{
 	-11, 4, 4, -4, 11, 4, -4, 4, 11,
 	11, 4, 4, 4, 11, 4, 4, 4, 11,
 	-11, -4, 4, -4, -11, 4, -4, -4, 11,
@@ -56,7 +56,7 @@ var gradients3D = []int8{
 // vertices of a disprismatotesseractihexadecachoron from the center,
 // skewed so that the tetrahedral and cubic facets can be inscribed inside
 // spheres of the same radius.
-var gradients4D = []int8{
+var gradients4D = [256]int8{
 	3, 1, 1, 1, 1, 3, 1, 1, 1, 1, 3, 1, 1, 1, 1, 3,
 	-3, 1, 1, 1, -1, 3, 1, 1, -1, 1, 3, 1, -1, 1, 1, 3,
 	3, -1, 1, 1, 1, -3, 1, 1, 1, -1, 3, 1, 1, -1, 1, 3,

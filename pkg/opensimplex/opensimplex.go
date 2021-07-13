@@ -1,5 +1,4 @@
-// opensimplex is a Go implementation of Kurt Spencer's patent-free alternative
-// to Perlin and Simplex noise.
+// Package opensimplex is a Go implementation of Kurt Spencer's patent-free alternative to Perlin and Simplex noise.
 //
 // Given a seed, it generates smoothly-changing deterministic random values in
 // 2, 3 or 4 dimensions. It's commonly used for procedurally generated images,
@@ -18,32 +17,30 @@ package opensimplex
  * Based on Java v1.1 (October 5, 2014)
  */
 
-// A seeded 64-bit noise instance
+// Noise is a seeded 64-bit noise instance
 type Noise interface {
 	Eval2(x, y float64) float64
 	Eval3(x, y, z float64) float64
 	Eval4(x, y, z, w float64) float64
 }
 
-// A seeded 32-bit noise instance
+// Noise32 is a seeded 32-bit noise instance
 type Noise32 interface {
 	Eval2(x, y float32) float32
 	Eval3(x, y, z float32) float32
 	Eval4(x, y, z, w float32) float32
 }
 
-// Construct a Noise instance with a 64-bit seed. Two Noise instances with the
-// same seed will have the same output.
+// New constructs a Noise instance with a 64-bit seed.
 func New(seed int64) Noise {
-	s := &noise{
-		perm:            make([]int16, 256),
-		permGradIndex3D: make([]int16, 256),
-	}
+	s := &noise{}
 
 	source := make([]int16, 256)
 	for i := range source {
 		source[i] = int16(i)
 	}
+
+	gradientLenOver3 := int16(len(gradients3D)) / 3
 
 	seed = seed*6364136223846793005 + 1442695040888963407
 	seed = seed*6364136223846793005 + 1442695040888963407
@@ -56,29 +53,26 @@ func New(seed int64) Noise {
 		}
 
 		s.perm[i] = source[r]
-		s.permGradIndex3D[i] = (s.perm[i] % (int16(len(gradients3D)) / 3)) * 3
+		s.permGradIndex3D[i] = (s.perm[i] % gradientLenOver3) * 3
 		source[r] = source[i]
 	}
 
 	return s
 }
 
-// Construct a Noise32 instance with a 64-bit seed. Two Noise32 instances with the
-// same seed will have the same output.
+// New32 constructs a Noise32 instance with a 64-bit seed.
 func New32(seed int64) Noise32 {
 	return &cast32Noise{base: New(seed)}
 }
 
-// Construct a normalized Noise instance with a 64-bit seed. Eval methods will
-// return values in [0, 1). Two Noise instances with the same seed will have
-// the same output.
+// NewNormalized constructs a normalized Noise instance with a 64-bit seed. Eval methods will
+// return values in [0, 1).
 func NewNormalized(seed int64) Noise {
 	return &normNoise{base: New(seed)}
 }
 
-// Construct a normalized Noise32 instance with a 64-bit seed. Eval methods will
-// return values in [0, 1). Two Noise32 instances with the same seed will have
-// the same output.
+// NewNormalized32 constructs a normalized Noise32 instance with a 64-bit seed. Eval methods will
+// return values in [0, 1).
 func NewNormalized32(seed int64) Noise32 {
 	return &normNoise32{base: New(seed)}
 }
